@@ -14,7 +14,6 @@ type Client struct {
 
 func handleClient(conn net.Conn) {
     defer conn.Close()
-    conn.Write([]byte("Enter your name:\n"))
     nameReader := bufio.NewReader(conn)
     name, _ := nameReader.ReadString('\n')
     name = strings.TrimSpace(name)

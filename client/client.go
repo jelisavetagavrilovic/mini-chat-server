@@ -1,39 +1,58 @@
 package main
 
 import (
-    "bufio"
+	"bufio"
 	"fmt"
-    "net"
-    "os"
-    "strings"
+	"net"
+	"strings"
+
+	"github.com/rivo/tview"
 )
 
-func readMessages(conn net.Conn) {
-    reader := bufio.NewReader(conn)
-    for {
-        msg, err := reader.ReadString('\n')
-        if err != nil {
-            fmt.Println("\nDisconnected from server.")
-            os.Exit(0)
-        }
+var myName string
 
-        fmt.Print(msg) 
-    }
+func setMyName(name string) {
+	myName = name
 }
 
-func readInput(conn net.Conn) {
-    scanner := bufio.NewScanner(os.Stdin)
-    for {
-        if !scanner.Scan() {
-            break
-        }
+func askName(conn net.Conn) string {
+	fmt.Print("Enter your name: ")
+	var name string
+	fmt.Scanln(&name)
+	conn.Write([]byte(name + "\n"))
+	return name
+}
 
-        text := scanner.Text()
-        text = strings.TrimSpace(text)
-        if text == "" {
-            continue
-        }
-		
-        conn.Write([]byte(text + "\n"))
-    }
+func clientReader(conn net.Conn, view *tview.TextView) {
+	reader := bufio.NewReader(conn)
+	for {
+		msg, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Fprintf(view, "[red]Disconnected from server.[-]\n")
+			return
+		}
+		msg = strings.TrimSpace(msg)
+
+		if strings.HasSuffix(msg, "has joined the chat") || strings.HasSuffix(msg, "has left the chat") || strings.HasSuffix(msg, "User not found") {
+			AppendSystemMessage(view, msg)
+			continue
+		}
+
+		sender := parseSender(msg)
+
+		if sender == myName {
+			continue
+		}
+
+		if strings.HasPrefix(msg, "[Private]") {
+			AppendMessage(view, msg, false, true)
+		} else {
+			AppendMessage(view, msg, false, false)
+		}
+	}
+}
+
+
+func SendMessage(conn net.Conn, msg string) {
+	conn.Write([]byte(msg + "\n"))
 }

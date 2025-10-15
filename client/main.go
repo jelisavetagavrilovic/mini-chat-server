@@ -18,15 +18,16 @@ func main() {
     name := askName(conn)
 	setMyName(name)
 
+	activeUsers := []string{} 
 	app := tview.NewApplication()
-	messageView, input := NewChatUI(app, conn)
+	messageView, input := NewChatUI(app, conn, &activeUsers)
 
 	flex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(messageView, 0, 1, false).
 		AddItem(input, 1, 0, true)
 
-	go clientReader(conn, messageView)
+	go clientReader(conn, messageView, &activeUsers)
 
 	if err := app.SetRoot(flex, true).Run(); err != nil {
 		log.Fatal(err)

@@ -19,8 +19,18 @@ func handleClient(conn net.Conn) {
     name = strings.TrimSpace(name)
 
     clientsMux.Lock()
+    var existingUsers []string
+    for uname := range clients {
+        existingUsers = append(existingUsers, uname)
+    }
+
     clients[name] = Client{Name: name, Conn: conn}
     clientsMux.Unlock()
+
+    if len(existingUsers) > 0 {
+        conn.Write([]byte("Active users: " + strings.Join(existingUsers, ", ") + "\n"))
+    }
+
 
     messages <- fmt.Sprintf("%s has joined the chat", name)
 
@@ -31,6 +41,13 @@ func handleClient(conn net.Conn) {
             break
         }
         msg = strings.TrimSpace(msg)
+
+        // command
+        if strings.HasPrefix(msg, "/quit") {
+            conn.Write([]byte("Goodbye!\n"))
+            messages <- fmt.Sprintf("%s has left the chat", name)
+            return // defer - close the connection
+        }
 
         // private message if starts with "@"
         if strings.HasPrefix(msg, "@") {

@@ -23,7 +23,7 @@ func askName(conn net.Conn) string {
 	return name
 }
 
-func clientReader(conn net.Conn, view *tview.TextView) {
+func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
 	reader := bufio.NewReader(conn)
 	for {
 		msg, err := reader.ReadString('\n')
@@ -33,7 +33,24 @@ func clientReader(conn net.Conn, view *tview.TextView) {
 		}
 		msg = strings.TrimSpace(msg)
 
-		if strings.HasSuffix(msg, "has joined the chat") || strings.HasSuffix(msg, "has left the chat") || strings.HasSuffix(msg, "User not found") {
+		// existing users - users who logged before us
+        if strings.HasPrefix(msg, "Active users: ") {
+            users := strings.TrimPrefix(msg, "Active users: ")
+            *activeUsers = strings.Split(users, ", ")
+            continue
+        }
+
+		// systems messages
+		if strings.HasSuffix(msg, "has joined the chat") {
+			username := strings.TrimSuffix(msg, " has joined the chat")
+			*activeUsers = appendUser(*activeUsers, username)
+			AppendSystemMessage(view, msg)
+			continue
+		}
+
+		if strings.HasSuffix(msg, "has left the chat") {
+			username := strings.TrimSuffix(msg, " has left the chat")
+			*activeUsers = removeUser(*activeUsers, username)
 			AppendSystemMessage(view, msg)
 			continue
 		}
@@ -52,6 +69,24 @@ func clientReader(conn net.Conn, view *tview.TextView) {
 	}
 }
 
+func appendUser(list []string, user string) []string {
+	for _, u := range list {
+		if u == user {
+			return list
+		}
+	}
+	return append(list, user)
+}
+
+func removeUser(list []string, user string) []string {
+	newList := []string{}
+	for _, u := range list {
+		if u != user {
+			newList = append(newList, u)
+		}
+	}
+	return newList
+}
 
 func SendMessage(conn net.Conn, msg string) {
 	conn.Write([]byte(msg + "\n"))

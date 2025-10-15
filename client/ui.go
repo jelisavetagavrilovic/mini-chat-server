@@ -11,17 +11,19 @@ import (
 var commands = []string{"/quit", "/users"}
 
 func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*tview.TextView, *tview.InputField) {
+	// create the message view
 	messageView := tview.NewTextView().
 		SetDynamicColors(true).
 		SetRegions(true).
 		SetChangedFunc(func() { app.Draw() })
 	messageView.SetBorder(true).SetTitle("Chat")
 
+	// create the input field
 	input := tview.NewInputField().
 		SetLabel("> ").
 		SetFieldWidth(0)
 
-	// autocomplete funtions
+	// autocomplete functions
 	input.SetAutocompleteFunc(func(currentText string) []string {
 		currentText = strings.TrimSpace(currentText)
 		if currentText == "" {
@@ -49,6 +51,7 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 		return suggestions
 	})
 
+	// handle commands and messages
 	input.SetDoneFunc(func(key tcell.Key) {
 		if key != tcell.KeyEnter {
 			return
@@ -75,7 +78,6 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 		AppendMessage(messageView, text, true, strings.HasPrefix(text, "@"))
 		input.SetText("")
 	})
-
 
 	return messageView, input
 }

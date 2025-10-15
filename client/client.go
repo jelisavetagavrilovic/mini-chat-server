@@ -9,6 +9,7 @@ import (
 	"github.com/rivo/tview"
 )
 
+// client username
 var myName string
 
 func setMyName(name string) {
@@ -23,6 +24,7 @@ func askName(conn net.Conn) string {
 	return name
 }
 
+// clientReader reads messages from the server and updates the UI
 func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
 	reader := bufio.NewReader(conn)
 	for {
@@ -33,14 +35,14 @@ func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
 		}
 		msg = strings.TrimSpace(msg)
 
-		// existing users - users who logged before us
+		// existing users - list of users already logged in
         if strings.HasPrefix(msg, "Active users: ") {
             users := strings.TrimPrefix(msg, "Active users: ")
             *activeUsers = strings.Split(users, ", ")
             continue
         }
 
-		// systems messages
+		// system messages - user joined
 		if strings.HasSuffix(msg, "has joined the chat") {
 			username := strings.TrimSuffix(msg, " has joined the chat")
 			*activeUsers = appendUser(*activeUsers, username)
@@ -48,6 +50,7 @@ func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
 			continue
 		}
 
+		// system messages - user left
 		if strings.HasSuffix(msg, "has left the chat") {
 			username := strings.TrimSuffix(msg, " has left the chat")
 			*activeUsers = removeUser(*activeUsers, username)
@@ -58,9 +61,10 @@ func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
 		sender := parseSender(msg)
 
 		if sender == myName {
-			continue
+			continue 
 		}
 
+		// display messages
 		if strings.HasPrefix(msg, "[Private]") {
 			AppendMessage(view, msg, false, true)
 		} else {
@@ -69,6 +73,7 @@ func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
 	}
 }
 
+// appendUser adds a user to the active list if not already present
 func appendUser(list []string, user string) []string {
 	for _, u := range list {
 		if u == user {
@@ -78,6 +83,7 @@ func appendUser(list []string, user string) []string {
 	return append(list, user)
 }
 
+// removeUser removes a user from the active list
 func removeUser(list []string, user string) []string {
 	newList := []string{}
 	for _, u := range list {
@@ -88,6 +94,7 @@ func removeUser(list []string, user string) []string {
 	return newList
 }
 
+// SendMessage sends a message to the server
 func SendMessage(conn net.Conn, msg string) {
 	conn.Write([]byte(msg + "\n"))
 }

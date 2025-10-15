@@ -15,13 +15,58 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 	messageView := tview.NewTextView().
 		SetDynamicColors(true).
 		SetRegions(true).
-		SetChangedFunc(func() { app.Draw() })
+		SetScrollable(true)
+		
 	messageView.SetBorder(true).SetTitle("Chat")
+	messageView.SetChangedFunc(func() { 
+		messageView.ScrollToEnd()
+		app.Draw() 
+	})
 
 	// create the input field
 	input := tview.NewInputField().
 		SetLabel("> ").
+		SetFieldBackgroundColor(tcell.ColorBlack). 
+		SetFieldTextColor(tcell.ColorWhite).
 		SetFieldWidth(0)
+
+
+	messageView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch {
+		case event.Key() == tcell.KeyTAB:
+			app.SetFocus(input)
+			return nil
+
+		// case (event.Key() == tcell.KeyUp) && (event.Modifiers()&(tcell.ModMeta|tcell.ModCtrl)) != 0:
+		// 	messageView.ScrollTo(0, 0)
+		// 	return nil
+
+		// case (event.Key() == tcell.KeyDown) && (event.Modifiers()&(tcell.ModMeta|tcell.ModCtrl)) != 0:
+		// 	messageView.ScrollToEnd()
+		// 	return nil
+
+		case event.Key() == tcell.KeyUp:
+			row, _ := messageView.GetScrollOffset()
+			messageView.ScrollTo(row-1, 0)
+			return nil
+
+		case event.Key() == tcell.KeyDown:
+			row, _ := messageView.GetScrollOffset()
+			messageView.ScrollTo(row+1, 0)
+			return nil
+		}
+
+		return event
+	})
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyTAB:
+			app.SetFocus(messageView)
+			return nil
+		}
+		return event
+	})
 
 	// autocomplete functions
 	input.SetAutocompleteFunc(func(currentText string) []string {

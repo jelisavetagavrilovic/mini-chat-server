@@ -13,24 +13,30 @@ type Client struct {
 }
 
 func handleClient(conn net.Conn) {
+    // close connection when function exits
     defer conn.Close()
+
     nameReader := bufio.NewReader(conn)
     name, _ := nameReader.ReadString('\n')
     name = strings.TrimSpace(name)
 
+
     clientsMux.Lock()
+
+    // collect existing users to send them to the new user
     var existingUsers []string
     for uname := range clients {
         existingUsers = append(existingUsers, uname)
     }
 
+    // add a new client to clients map
     clients[name] = Client{Name: name, Conn: conn}
     clientsMux.Unlock()
 
     if len(existingUsers) > 0 {
+        // send the list to the new user
         conn.Write([]byte("Active users: " + strings.Join(existingUsers, ", ") + "\n"))
     }
-
 
     messages <- fmt.Sprintf("%s has joined the chat", name)
 
@@ -42,9 +48,15 @@ func handleClient(conn net.Conn) {
         }
         msg = strings.TrimSpace(msg)
 
-        // command
+        // command - "quit"
         if strings.HasPrefix(msg, "/quit") {
             conn.Write([]byte("Goodbye!\n"))
+
+            // update clients map
+            clientsMux.Lock()
+            delete(clients, name)
+            clientsMux.Unlock()
+
             messages <- fmt.Sprintf("%s has left the chat", name)
             return // defer - close the connection
         }
@@ -70,6 +82,7 @@ func handleClient(conn net.Conn) {
         messages <- fmt.Sprintf("%s: %s", name, msg)
     }
 
+    // remove client from map if he disconnect (cmd + c)
     clientsMux.Lock()
     delete(clients, name)
     clientsMux.Unlock()

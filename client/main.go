@@ -25,7 +25,6 @@ func main() {
 
 	// create message view and input field
 	messageView, input := NewChatUI(app, conn, &activeUsers)
-
 	// layout
 	flex := tview.NewFlex().
 		SetDirection(tview.FlexRow).
@@ -33,7 +32,7 @@ func main() {
 		AddItem(input, 1, 0, true)
 
 	// start goroutine to handle incoming messages
-	go clientReader(conn, messageView, &activeUsers)
+	go clientReader(conn, messageView, input, &activeUsers)
 
 	// run the TUI application
 	if err := app.SetRoot(flex, true).Run(); err != nil {

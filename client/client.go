@@ -25,12 +25,13 @@ func askName(conn net.Conn) string {
 }
 
 // clientReader reads messages from the server and updates the UI
-func clientReader(conn net.Conn, view *tview.TextView, activeUsers *[]string) {
+func clientReader(conn net.Conn, view *tview.TextView, input *tview.InputField, activeUsers *[]string) {
 	reader := bufio.NewReader(conn)
 	for {
 		msg, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Fprintf(view, "[red]Disconnected from server.[-]\n")
+			input.SetDisabled(true)
 			return
 		}
 		msg = strings.TrimSpace(msg)

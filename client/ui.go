@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -17,7 +18,7 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 		SetRegions(true).
 		SetScrollable(true)
 		
-	messageView.SetBorder(true).SetTitle("Chat")
+	messageView.SetBorder(true).SetTitle(fmt.Sprintf("Chat - %s", myName))
 	messageView.SetChangedFunc(func() { 
 		messageView.ScrollToEnd()
 		app.Draw() 
@@ -29,7 +30,6 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 		SetFieldBackgroundColor(tcell.ColorBlack). 
 		SetFieldTextColor(tcell.ColorWhite).
 		SetFieldWidth(0)
-
 
 	messageView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch {

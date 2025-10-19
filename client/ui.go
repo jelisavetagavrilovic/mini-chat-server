@@ -9,7 +9,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-var commands = []string{"/quit", "/users"}
+var commands = []string{"/users", "/quit", "/help"}
 
 func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*tview.TextView, *tview.InputField) {
 	// create the message view
@@ -116,6 +116,17 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 		if text == "/users" {
 			SendMessage(conn, text)
 			AppendSystemMessage(messageView, "Active users: " + strings.Join(*activeUsers, ", "))
+			input.SetText("")
+			return
+		}
+
+		if text == "/help" {
+			AppendSystemMessage(messageView, `Available commands:
+			@user msg - send a private message msg to user
+			/users    - show list of active users
+			/quit     - leave the chat
+			/help     - show this help message
+			`)
 			input.SetText("")
 			return
 		}

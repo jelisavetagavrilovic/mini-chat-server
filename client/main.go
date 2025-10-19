@@ -32,7 +32,7 @@ func main() {
 		AddItem(input, 1, 0, true)
 
 	// start goroutine to handle incoming messages
-	go clientReader(conn, messageView, input, &activeUsers)
+	go clientReader(conn, app, messageView, input, &activeUsers)
 
 	// run the TUI application
 	if err := app.SetRoot(flex, true).Run(); err != nil {

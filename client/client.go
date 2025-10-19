@@ -9,69 +9,104 @@ import (
 	"github.com/rivo/tview"
 )
 
-// client username
-var myName string
+var (
+	myName string
+	reader *bufio.Reader
+)
 
 func setMyName(name string) {
 	myName = name
 }
 
 func askName(conn net.Conn) string {
-	fmt.Print("Enter your name: ")
 	var name string
-	fmt.Scanln(&name)
-	conn.Write([]byte(name + "\n"))
-	return name
+	reader = bufio.NewReader(conn)
+	
+	for {
+		name = ""
+		fmt.Print("Enter your username: ")
+		fmt.Scanln(&name)
+		conn.Write([]byte(name + "\n"))
+
+		// read server response
+        response, _ := reader.ReadString('\n')
+        response = strings.TrimSpace(response)
+
+        if response == "NAME_ACCEPTED" {
+            return name
+        } else if response == "NAME_TAKEN" {
+			fmt.Println("Username is already taken, please choose another one.")
+		} else if response == "NOT_NAME" {
+			fmt.Println("Please choose a username.")
+		} else {
+			fmt.Println("Unexpected server response.")
+		}
+	}
 }
 
 // clientReader reads messages from the server and updates the UI
-func clientReader(conn net.Conn, view *tview.TextView, input *tview.InputField, activeUsers *[]string) {
-	reader := bufio.NewReader(conn)
-	for {
-		msg, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Fprintf(view, "[red]Disconnected from server.[-]\n")
-			input.SetDisabled(true)
-			return
-		}
-		msg = strings.TrimSpace(msg)
-
-		// existing users - list of users already logged in
-        if strings.HasPrefix(msg, "Active users: ") {
-            users := strings.TrimPrefix(msg, "Active users: ")
-            *activeUsers = strings.Split(users, ", ")
-            continue
+func clientReader(conn net.Conn, app *tview.Application, view *tview.TextView, input *tview.InputField, activeUsers *[]string) {
+    for {
+        msg, err := reader.ReadString('\n')
+        if err != nil {
+            app.QueueUpdateDraw(func() {
+                fmt.Fprintf(view, "[red]Disconnected from server.[-]\n")
+                input.SetDisabled(true)
+            })
+            return
         }
 
-		// system messages - user joined
-		if strings.HasSuffix(msg, "has joined the chat") {
-			username := strings.TrimSuffix(msg, " has joined the chat")
-			*activeUsers = appendUser(*activeUsers, username)
-			AppendSystemMessage(view, msg)
-			continue
-		}
+        // handle case where multiple lines arrive in one read
+        lines := strings.Split(msg, "\n")
+        for _, line := range lines {
+            line = strings.TrimSpace(line)
+            if line == "" {
+                continue
+            }
 
-		// system messages - user left
-		if strings.HasSuffix(msg, "has left the chat") {
-			username := strings.TrimSuffix(msg, " has left the chat")
-			*activeUsers = removeUser(*activeUsers, username)
-			AppendSystemMessage(view, msg)
-			continue
-		}
+            app.QueueUpdateDraw(func() {
+                // existing users - list of users already logged in
+                if strings.HasPrefix(line, "Active users: ") {
+                    users := strings.TrimPrefix(line, "Active users: ")
+                    *activeUsers = strings.Split(users, ", ")
+                    return
+                }
 
-		sender := parseSender(msg)
+                // system messages - user joined
+                if strings.HasSuffix(line, "has joined the chat") {
+                    username := strings.TrimSuffix(line, " has joined the chat")
+                    *activeUsers = appendUser(*activeUsers, username)
+                    AppendSystemMessage(view, line)
+                    return
+                }
 
-		if sender == myName {
-			continue 
-		}
+                // system messages - user left
+                if strings.HasSuffix(line, "has left the chat") {
+                    username := strings.TrimSuffix(line, " has left the chat")
+                    *activeUsers = removeUser(*activeUsers, username)
+                    AppendSystemMessage(view, line)
+                    return
+                }
 
-		// display messages
-		if strings.HasPrefix(msg, "[Private]") {
-			AppendMessage(view, msg, false, true)
-		} else {
-			AppendMessage(view, msg, false, false)
-		}
-	}
+				if strings.HasSuffix(line, "User not found") {
+					AppendSystemMessage(view, line)
+					return
+				}
+
+                sender := parseSender(line)
+                if sender == myName {
+                    return
+                }
+
+				// display messages
+                if strings.HasPrefix(line, "[Private]") {
+                    AppendMessage(view, line, false, true)
+                } else {
+                    AppendMessage(view, line, false, false)
+                }
+            })
+        }
+    }
 }
 
 // appendUser adds a user to the active list if not already present

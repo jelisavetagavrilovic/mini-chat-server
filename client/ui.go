@@ -114,6 +114,7 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 		}
 
 		if text == "/users" {
+			SendMessage(conn, text)
 			AppendSystemMessage(messageView, "Active users: " + strings.Join(*activeUsers, ", "))
 			input.SetText("")
 			return

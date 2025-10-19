@@ -65,44 +65,57 @@ func clientReader(conn net.Conn, app *tview.Application, view *tview.TextView, i
             }
 
             app.QueueUpdateDraw(func() {
-                // existing users - list of users already logged in
-                if strings.HasPrefix(line, "Active users: ") {
-                    users := strings.TrimPrefix(line, "Active users: ")
-                    *activeUsers = strings.Split(users, ", ")
+                colonIdx := strings.Index(line, ":")
+                if colonIdx == -1 {
+                    AppendSystemMessage(view, "Unexpected server response.")
                     return
                 }
 
-                // system messages - user joined
-                if strings.HasSuffix(line, "has joined the chat") {
-                    username := strings.TrimSuffix(line, " has joined the chat")
-                    *activeUsers = appendUser(*activeUsers, username)
-                    AppendSystemMessage(view, line)
-                    return
+                from := strings.TrimSpace(line[:colonIdx])
+                content := strings.TrimSpace(line[colonIdx+1:])
+
+                // system messages
+                if from == "System" {
+                    // existing users - list of users already logged in
+                    if strings.HasPrefix(content, "Active users: ") {
+                        users := strings.TrimPrefix(content, "Active users: ")
+                        *activeUsers = strings.Split(users, ", ")
+                        return
+                    }
+
+                    // user joined
+                    if strings.HasSuffix(content, "has joined the chat") {
+                        username := strings.TrimSuffix(content, " has joined the chat")
+                        *activeUsers = appendUser(*activeUsers, username)
+                        AppendSystemMessage(view, content)
+                        return
+                    }
+
+                    // user left
+                    if strings.HasSuffix(content, "has left the chat") {
+                        username := strings.TrimSuffix(content, " has left the chat")
+                        *activeUsers = removeUser(*activeUsers, username)
+                        AppendSystemMessage(view, content)
+                        return
+                    }
+
+                    // user not found
+                    if strings.HasSuffix(content, "User not found") {
+                        AppendSystemMessage(view, content)
+                        return
+                    }
+
                 }
 
-                // system messages - user left
-                if strings.HasSuffix(line, "has left the chat") {
-                    username := strings.TrimSuffix(line, " has left the chat")
-                    *activeUsers = removeUser(*activeUsers, username)
-                    AppendSystemMessage(view, line)
-                    return
-                }
-
-				if strings.HasSuffix(line, "User not found") {
-					AppendSystemMessage(view, line)
-					return
-				}
-
-                sender := parseSender(line)
-                if sender == myName {
+                if from == myName {
                     return
                 }
 
 				// display messages
-                if strings.HasPrefix(line, "[Private]") {
-                    AppendMessage(view, line, false, true)
+                if strings.HasPrefix(content, "[Private]") {
+                    AppendMessage(view, content, false, true)
                 } else {
-                    AppendMessage(view, line, false, false)
+                    AppendMessage(view, content, false, false)
                 }
             })
         }

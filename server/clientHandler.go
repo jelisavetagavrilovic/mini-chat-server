@@ -12,6 +12,7 @@ type Client struct {
     Conn net.Conn
 }
 
+
 func handleClient(conn net.Conn) {
     // close connection when function exits
     defer conn.Close()
@@ -57,10 +58,10 @@ func handleClient(conn net.Conn) {
     }
     clientsMux.Unlock()
 
-    messages <- fmt.Sprintf("%s has joined the chat", name)
+    SendMessage("System", "", fmt.Sprintf("%s has joined the chat", name))
 
     // send the list to the new user
-    conn.Write([]byte("Active users: " + strings.Join(existingUsers, ", ") + "\n"))
+    SendMessage("System", name, "Active users: " + strings.Join(existingUsers, ", "))
     
 
     // start reading user messages
@@ -77,7 +78,7 @@ func handleClient(conn net.Conn) {
             clientsMux.Lock()
             delete(clients, name)
             clientsMux.Unlock()
-            messages <- fmt.Sprintf("%s has left the chat", name)
+            SendMessage("System", "", fmt.Sprintf("%s has left the chat", name))
             return
         }
 
@@ -90,7 +91,7 @@ func handleClient(conn net.Conn) {
             }
             clientsMux.Unlock()
 
-            conn.Write([]byte("Active users: " + strings.Join(existingUsers, ", ") + "\n"))
+            SendMessage("System", name, "Active users: " + strings.Join(existingUsers, ", "))
             continue
         }
 
@@ -101,9 +102,9 @@ func handleClient(conn net.Conn) {
                 targetName := strings.TrimPrefix(parts[0], "@")
                 clientsMux.Lock()
                 if target, ok := clients[targetName]; ok {
-                    target.Conn.Write([]byte(fmt.Sprintf("[Private] %s: %s\n", name, parts[1])))
+                    SendMessage(name, target.Name, fmt.Sprintf("[Private] %s: %s\n", name, parts[1]))
                 } else {
-                    conn.Write([]byte("User not found\n"))
+                    SendMessage("System", name, "User not found")
                 }
                 clientsMux.Unlock()
                 continue
@@ -111,13 +112,13 @@ func handleClient(conn net.Conn) {
         }
 
         // broadcast
-        messages <- fmt.Sprintf("%s: %s", name, msg)
+        SendMessage(name, "", fmt.Sprintf("%s: %s\n", name, msg))
     }
 
     // remove client from map if he disconnect (cmd + c)
     clientsMux.Lock()
     delete(clients, name)
     clientsMux.Unlock()
-    messages <- fmt.Sprintf("%s has left the chat", name)
+    SendMessage("System", "", fmt.Sprintf("%s has left the chat", name))
     return
 }

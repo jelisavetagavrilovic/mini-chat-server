@@ -126,6 +126,10 @@ func NewChatUI(app *tview.Application, conn net.Conn, activeUsers *[]string) (*t
 			/users    - show list of active users
 			/quit     - leave the chat
 			/help     - show this help message
+
+		Interface navigation:
+			TAB       - switch focus between input field and message view
+			↑ / ↓     - scroll message view up and down
 			`)
 			input.SetText("")
 			return

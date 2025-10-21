@@ -17,7 +17,8 @@ func main() {
 
     fmt.Println("Server started on port 8080")
 
-    // start broadcaster goroutine that sends messages to all clients
+    // starts a goroutine that continuously listens on the 'messages' channel 
+    // and forwards messages to the appropriate clients 
 	go dispatcher()
 
     // accept incoming connections

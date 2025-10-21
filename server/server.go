@@ -18,7 +18,7 @@ var (
     messages   = make(chan Message)      // channel for messages to broadcast
 )
 
-// broadcaster listens on messages channel and sends message to all connected clients
+// dispatcher listens on messages channel and sends message 
 func dispatcher() {
     for {
         msg := <- messages
